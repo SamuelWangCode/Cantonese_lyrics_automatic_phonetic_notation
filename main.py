@@ -1,14 +1,21 @@
-import requests
-from bs4 import BeautifulSoup
-import urllib.parse
-import time
 import argparse
 import json
+import re
+import time
+import urllib.parse
 from pathlib import Path
+
+import requests
+from bs4 import BeautifulSoup
 from zhconv import convert
 
 # 缓存文件路径
 CACHE_FILE = "pronunciation_cache.json"
+
+
+def is_chinese(char):
+    """判断字符是否为中文字符"""
+    return re.match(r'[\u4e00-\u9fff]', char) is not None
 
 
 def load_cache():
@@ -57,7 +64,7 @@ def get_cantonese_pronunciation(word):
 
 
 def process_lyrics(lyrics, traditional=False):
-    """处理歌词生成注音"""
+    """处理歌词生成注音（跳过非汉语内容）"""
     print("🎵 开始处理歌词注音...")
     output = []
     lines = lyrics.split('\n')
@@ -73,6 +80,12 @@ def process_lyrics(lyrics, traditional=False):
         pinyin = []
         for char in converted_line:
             if char.strip():
+                # 跳过非汉语字符（直接保留）
+                if not is_chinese(char):
+                    pinyin.append(char)
+                    print(f"  ⏩ 跳过非汉语字符: 「{char}」")
+                    continue
+
                 pron = get_cantonese_pronunciation(char)
                 pinyin.append(pron)
                 print(f"  ✅ 「{char}」: {pron.ljust(5)}")
