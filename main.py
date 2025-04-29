@@ -9,8 +9,8 @@ import requests
 from bs4 import BeautifulSoup
 from zhconv import convert
 
-# 缓存文件路径
-CACHE_FILE = "pronunciation_cache.json"
+# 缓存文件路径（改为相对路径处理）
+CACHE_FILE = Path(__file__).parent / "pronunciation_cache.json"
 
 
 def is_chinese(char):
@@ -20,7 +20,7 @@ def is_chinese(char):
 
 def load_cache():
     try:
-        if Path(CACHE_FILE).exists():
+        if CACHE_FILE.exists():
             with open(CACHE_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
     except Exception as e:
@@ -97,33 +97,49 @@ def process_lyrics(lyrics, traditional=False):
     return '\n'.join(output)
 
 
-def main():
+def generate_pronunciation(input_file, output_file, conversion=False):
+    """生成注音的公共接口"""
+    with open(input_file, 'r', encoding='utf-8') as f:
+        lyrics = f.read()
+
+    processed = process_lyrics(lyrics, conversion)
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(processed)
+    save_cache(pronunciation_cache)
+
+
+def cli_main():
+    """命令行入口"""
     parser = argparse.ArgumentParser(description='粤语歌词注音工具')
-    parser.add_argument('-f', '--file', default='lyrics.txt', help='歌词文件路径（默认为lyrics.txt）')
+    parser.add_argument('file', nargs='?', default='lyrics.txt',
+                        help='歌词文件路径（默认为lyrics.txt）')
     parser.add_argument('-o', '--output', help='自定义输出文件名')
-    parser.add_argument('-t', '--traditional', action='store_true', help='保存繁体字歌词')
+    parser.add_argument('-t', '--traditional', action='store_true',
+                        help='保存繁体字歌词')
     args = parser.parse_args()
 
     try:
         input_path = Path(args.file)
         print(f"📖 正在读取文件：{input_path}")
-        with open(input_path, 'r', encoding='utf-8') as f:
-            lyrics = f.read().strip()
 
-        # 自动生成输出文件名
+        # 自动生成输出路径
         if args.output:
             output_path = Path(args.output)
         else:
-            output_path = input_path.with_name(f"{input_path.stem}_Cantonese{input_path.suffix}")
+            output_name = f"{input_path.stem}_Cantonese{input_path.suffix}"
+            output_path = input_path.with_name(output_name)
 
-        print("⏳ 正在生成注音...")
-        result = process_lyrics(lyrics, args.traditional)
+        # 核心处理
+        generate_pronunciation(
+            input_file=input_path,
+            output_file=output_path,
+            conversion=True if args.traditional else False
+        )
 
-        # 确保输出目录存在
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(result)
-
+        # 统计信息
+        with open(input_path, 'r', encoding='utf-8') as f:
+            lyrics = f.read()
         print(f"\n✅ 成功生成注音文件：{output_path}")
         print(f"📊 统计信息：")
         print(f"   输入行数：{len(lyrics.splitlines())}")
@@ -139,5 +155,5 @@ def main():
 
 
 if __name__ == "__main__":
-    print("🚀 粤语歌词注音工具 v2.0")
-    main()
+    print("🚀 粤语歌词注音工具 v2.1")
+    cli_main()
