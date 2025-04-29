@@ -11,6 +11,8 @@ class CantoneseApp(tk.Tk):
         super().__init__()
         self.title("粤语歌词注音工具")
         self.geometry("600x400")
+        self.output_manually_set = False  # 新增状态标记
+        self.auto_setting_output = False  # 自动设置输出路径标志
         self.create_widgets()
         exe_dir = Path(sys.argv[0]).parent
         default_input = exe_dir / 'lyrics.txt'
@@ -54,9 +56,19 @@ class CantoneseApp(tk.Tk):
         output_frame.pack(pady=10, padx=10, fill="x")
 
         self.output_var = tk.StringVar()
-        ttk.Entry(output_frame, textvariable=self.output_var).pack(side="left", fill="x", expand=True, padx=5)
-        ttk.Button(output_frame, text="选择...", command=self.select_output).pack(side="left")
-
+        self.output_var.trace_add('write', self.on_output_path_changed)  # 绑定事件
+        # 输入框和按钮按顺序排列
+        ttk.Entry(output_frame, textvariable=self.output_var).pack(
+            side="left",
+            fill="x",
+            expand=True,
+            padx=5
+        )
+        ttk.Button(
+            output_frame,
+            text="浏览...",
+            command=self.select_output
+        ).pack(side="left")
         # 简繁体选择
         options_frame = ttk.Frame(self)
         options_frame.pack(pady=10, fill="x")
@@ -68,6 +80,11 @@ class CantoneseApp(tk.Tk):
                         value=True).pack(side="left")
         # 生成按钮
         ttk.Button(self, text="生成粤语注音", command=self.generate).pack(pady=20)
+
+    def on_output_path_changed(self, *args):
+        """监测输出路径修改事件"""
+        if not self.auto_setting_output:
+            self.output_manually_set = True
 
     def select_file(self):
         """文件选择对话框"""
@@ -83,7 +100,8 @@ class CantoneseApp(tk.Tk):
         if filepath:
             self.file_entry.delete(0, tk.END)
             self.file_entry.insert(0, filepath)
-            self.auto_generate_output(filepath)
+            if not self.output_manually_set:  # 仅自动生成时更新
+                self.auto_generate_output(filepath)
 
     def select_output(self):
         """输出路径选择"""
@@ -95,18 +113,23 @@ class CantoneseApp(tk.Tk):
             filetypes=[("文本文件", "*.txt")]
         )
         if filepath:
+            self.output_manually_set = True  # 标记为用户设置
             self.output_var.set(filepath)
 
     def auto_generate_output(self, input_path):
-        """自动生成默认输出路径"""
-        if not self.output_var.get():
-            try:
-                input_path = Path(input_path)
-                output_path = input_path.with_name(
-                    f"{input_path.stem}_Cantonese.txt")
-                self.output_var.set(str(output_path))
-            except:
-                pass
+        """智能生成输出路径"""
+        if self.output_manually_set:
+            return
+
+        try:
+            input_path = Path(input_path)
+            output_path = input_path.with_name(f"{input_path.stem}_Cantonese.txt")
+            self.auto_setting_output = True  # 标记为自动设置
+            self.output_var.set(str(output_path))
+        except Exception as e:
+            print(f"路径生成错误: {e}")
+        finally:
+            self.auto_setting_output = False
 
     def validate_inputs(self):
         """输入验证"""
