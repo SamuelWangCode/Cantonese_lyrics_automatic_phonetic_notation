@@ -18,14 +18,6 @@ class CantoneseApp(tk.Tk):
             self.file_entry.delete(0, tk.END)
             self.file_entry.insert(0, str(default_input))
             self.auto_generate_output(str(default_input))
-        # self.bind_drag_events()
-        self.bind_drop_events()
-
-    def bind_drag_events(self):
-        """窗口拖动事件绑定"""
-        # 绑定到标题栏区域（实际可绑定到任何可见部件）
-        self.bind('<ButtonPress-1>', self.drag_start)
-        self.bind('<B1-Motion>', self.drag_motion)
 
     def drag_start(self, event):
         self._drag_start_x = event.x
@@ -35,16 +27,6 @@ class CantoneseApp(tk.Tk):
         x = self.winfo_x() + (event.x - self._drag_start_x)
         y = self.winfo_y() + (event.y - self._drag_start_y)
         self.geometry(f"+{x}+{y}")
-
-    def bind_drop_events(self):
-        """跨平台拖放支持"""
-        try:
-            from tkinter.dnd import DND_FILES
-            self.tk.call('package', 'require', 'tkdnd')
-            self.drop_target_register(DND_FILES)
-            self.dnd_bind('<<Drop>>', self.handle_drop)
-        except Exception as e:
-            print(f"拖放支持初始化失败: {str(e)}")
 
     def create_widgets(self):
         # 创建自定义标题栏
@@ -86,32 +68,6 @@ class CantoneseApp(tk.Tk):
                         value=True).pack(side="left")
         # 生成按钮
         ttk.Button(self, text="生成粤语注音", command=self.generate).pack(pady=20)
-
-    def _drag_start(self, event):
-        self._drag_data = {"x": event.x, "y": event.y}
-
-    def _drag_motion(self, event):
-        deltax = event.x - self._drag_data["x"]
-        deltay = event.y - self._drag_data["y"]
-        x = self.winfo_x() + deltax
-        y = self.winfo_y() + deltay
-        self.geometry(f"+{x}+{y}")
-
-    def _drop(self, event):
-        if hasattr(self, '_drag_data'):
-            del self._drag_data
-
-    def handle_drop(self, event):
-        """处理文件拖放"""
-        files = event.data.split() if hasattr(event, 'data') else []
-        if files:
-            valid_files = [f for f in files if f.endswith('.txt')]
-            if valid_files:
-                self.file_entry.delete(0, tk.END)
-                self.file_entry.insert(0, valid_files[0])
-                self.auto_generate_output(valid_files[0])
-            else:
-                messagebox.showerror("错误", "仅支持.txt文件")
 
     def select_file(self):
         """文件选择对话框"""
